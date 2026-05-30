@@ -111,8 +111,8 @@ const useEnrollmentForm = (setStep) => {
         duration: 3000,
       });
 
-      // Navigate to the success screen (step index 9 = after 8 form steps)
-      setStep(9);
+      // Navigate to the success screen (step 10 = after 9 form steps)
+      setStep(10);
     } catch (err) {
       console.error("Submission error:", err);
       toast({

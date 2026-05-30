@@ -22,42 +22,48 @@ const Step9TC = ({ onNext, shake, isSubmitting }) => {
 
   const agreed = watch("agreedToTerms");
 
-  // Loading phase logic (similar to Step 8)
+  // Track whether the user has clicked Submit so the overlay appears
+  // immediately, before isSubmitting becomes true in the parent.
+  const [clicked, setClicked] = React.useState(false);
   const [phaseIdx, setPhaseIdx] = React.useState(0);
   const phaseTimer = React.useRef(null);
-  const hasClickedRef = React.useRef(false);
-  const [localBusy, setLocalBusy] = React.useState(false);
+  const prevSubmitting = React.useRef(false);
+
+  // Show overlay whenever clicked OR parent is actively submitting
+  const busy = clicked || isSubmitting;
 
   React.useEffect(() => {
-    if (isSubmitting || localBusy) {
+    // ── Submission just started ─────────────────────────────
+    if (isSubmitting && !prevSubmitting.current) {
+      prevSubmitting.current = true;
       setPhaseIdx(0);
       let idx = 0;
+      clearInterval(phaseTimer.current);
       phaseTimer.current = setInterval(() => {
-        idx = Math.min(idx + 1, PHASES.length - 2);
+        idx = Math.min(idx + 1, PHASES.length - 2); // cycle between phase 0 → 1
         setPhaseIdx(idx);
       }, 2200);
-    } else {
-      if (hasClickedRef.current) {
-        setPhaseIdx(PHASES.length - 1);
-        setTimeout(() => {
-          clearInterval(phaseTimer.current);
-          hasClickedRef.current = false;
-          setLocalBusy(false);
-          setPhaseIdx(0);
-        }, 800);
-      }
-      clearInterval(phaseTimer.current);
     }
-    return () => clearInterval(phaseTimer.current);
-  }, [isSubmitting, localBusy]);
 
-  const busy = isSubmitting || localBusy;
+    // ── Submission just finished ────────────────────────────
+    if (!isSubmitting && prevSubmitting.current) {
+      prevSubmitting.current = false;
+      clearInterval(phaseTimer.current);
+      // Flash "All done!" briefly; parent will navigate to step 10
+      setPhaseIdx(PHASES.length - 1);
+      setTimeout(() => {
+        setClicked(false);
+        setPhaseIdx(0);
+      }, 900);
+    }
+
+    return () => clearInterval(phaseTimer.current);
+  }, [isSubmitting]);
 
   const handleSubmitClick = () => {
-    if (hasClickedRef.current || busy || !agreed) return;
-    hasClickedRef.current = true;
-    setLocalBusy(true);
-    onNext(); 
+    if (clicked || isSubmitting || !agreed) return;
+    setClicked(true); // show overlay immediately while parent async starts
+    onNext();
   };
 
   const currentPhase = PHASES[phaseIdx];
